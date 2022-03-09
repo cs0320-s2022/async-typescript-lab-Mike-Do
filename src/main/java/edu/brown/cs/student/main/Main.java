@@ -6,14 +6,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
 import com.google.gson.Gson;
 import freemarker.template.Configuration;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import spark.*;
 import spark.template.freemarker.FreeMarkerEngine;
 
@@ -62,6 +67,8 @@ public final class Main {
     // TODO: create a call to Spark.post to make a POST request to a URL which
     // will handle getting matchmaking results for the input
     // It should only take in the route and a new ResultsHandler
+    Spark.post("/matches", new ResultsHandler());
+
     Spark.options("/*", (request, response) -> {
       String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
       if (accessControlRequestHeaders != null) {
@@ -110,14 +117,27 @@ public final class Main {
       // TODO: Get JSONObject from req and use it to get the value of the sun, moon,
       // and rising
       // for generating matches
+      String json = req.body();
+      List<String> matches = null;
+      try {
+        JSONObject jsonObject = new JSONObject(json);
+        String sun = jsonObject.getString("sun");
+        String moon = jsonObject.getString("moon");
+        String rising = jsonObject.getString("rising");
 
-      // TODO: use the MatchMaker.makeMatches method to get matches
+        // TODO: use the MatchMaker.makeMatches method to get matches
+        MatchMaker mm = new MatchMaker();
+        matches = mm.makeMatches(sun, moon, rising);
+      } catch (JSONException e) {
+        e.printStackTrace();
+      }
 
       // TODO: create an immutable map using the matches
+      Map<String, Object> result = ImmutableMap.of("matches", matches);
 
       // TODO: return a json of the suggestions (HINT: use GSON.toJson())
-      Gson GSON = new Gson();
-      return null;
+      Gson gson = new Gson();
+      return gson.toJson(result);
     }
   }
 }
